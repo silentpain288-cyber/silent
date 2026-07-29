@@ -1,57 +1,134 @@
 import telebot
+from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 TOKEN = "8883032492:AAGUNmCljCd2AMf8n6hxlo9pUgSaQRpW0MU"
-CHANNEL_ID = "@NnHHB5BhE785OTRk"  # آیدی کانال شما
-USER_ID = 8831703400  # آیدی شما
+CHANNEL_ID = "@Phantomupdatess"  # 🔥 یوزرنیم جدید شما
 
 bot = telebot.TeleBot(TOKEN)
 
-print("=" * 50)
-print("🔍 شروع عیب‌یابی ربات...")
-print("=" * 50)
+# صفحه‌ی کلیدهای درون‌خطی
+def membership_keyboard():
+    keyboard = InlineKeyboardMarkup(row_width=1)
+    btn_channel = InlineKeyboardButton(
+        text="❈ 𝙎𝙚𝙡𝙛 𝙋𝙝𝙖𝙣𝙩𝙤𝙢『𖣘』",
+        url="https://t.me/Phantomupdatess"  # لینک جدید شما
+    )
+    btn_check = InlineKeyboardButton(
+        text="✅ عضو شدم",
+        callback_data="check_membership"
+    )
+    keyboard.add(btn_channel, btn_check)
+    return keyboard
 
-# مرحله 1: بررسی اینکه ربات زنده است
-try:
-    me = bot.get_me()
-    print(f"✅ ربات فعال است: @{me.username}")
-except Exception as e:
-    print(f"❌ ربات غیرفعال است: {e}")
-    exit()
+# بررسی عضویت کاربر
+@bot.message_handler(commands=['start'])
+def send_welcome(message):
+    user_id = message.from_user.id
+    chat_id = message.chat.id
+    
+    try:
+        # ابتدا بررسی کنید که ربات به کانال دسترسی دارد
+        bot.get_chat(CHANNEL_ID)
+        
+        member = bot.get_chat_member(CHANNEL_ID, user_id)
+        
+        if member.status in ['member', 'administrator', 'creator']:
+            bot.reply_to(
+                message, 
+                "✅ **شما قبلاً عضو کانال هستید!**\n"
+                "خوش آمدی به جمع فانتومی‌ها ⚡\n\n"
+                "🔗 کانال: @Phantomupdatess"
+            )
+        else:
+            text = (
+                "⫸◄◂\n"
+                "❈ **خوش آمدی رفیق!** ❈\n"
+                "برای قدم‌گذاشتن در دنیای **فانتوم**،\n"
+                "یک شرط ساده داریم:\n\n"
+                "◄ عضویت در کانال اختصاصی ما\n"
+                "◄ تا از آخرین رازها و آپدیت‌ها جا نمونی\n\n"
+                "⫸ پس همین حالا عضو شو،\n"
+                "سپس دکمه‌ی **«عضو شدم»** رو بزن تا مسیر برات هموار بشه!\n\n"
+                "⫸◄◂"
+            )
+            bot.send_message(
+                chat_id,
+                text,
+                reply_markup=membership_keyboard(),
+                parse_mode='Markdown'
+            )
+    except Exception as e:
+        print(f"❌ خطا: {e}")
+        bot.reply_to(
+            message, 
+            "⚠️ **ربات به کانال دسترسی ندارد!**\n"
+            "لطفاً ربات را به‌عنوان ادمین به کانال اضافه کنید.\n\n"
+            "🔗 کانال: @Phantomupdatess"
+        )
 
-# مرحله 2: بررسی دسترسی به کانال
-try:
-    chat = bot.get_chat(CHANNEL_ID)
-    print(f"✅ کانال پیدا شد: {chat.title}")
-    print(f"   📌 نوع کانال: {'عمومی' if chat.username else 'خصوصی'}")
-    print(f"   📌 آیدی عددی: {chat.id}")
-except Exception as e:
-    print(f"❌ خطا در دسترسی به کانال: {e}")
-    print("   ⚠️ مطمئن شوید ربات در کانال عضو است و ادمین است!")
-    exit()
+# بررسی عضویت با دکمه
+@bot.callback_query_handler(func=lambda call: call.data == "check_membership")
+def check_callback(call):
+    user_id = call.from_user.id
+    chat_id = call.message.chat.id
+    message_id = call.message.message_id
+    
+    try:
+        member = bot.get_chat_member(CHANNEL_ID, user_id)
+        
+        if member.status in ['member', 'administrator', 'creator']:
+            bot.edit_message_text(
+                "✅ **عضویت تأیید شد!**\n"
+                "اکنون به تمام امکانات ربات دسترسی داری 😉\n\n"
+                "🔗 کانال: @Phantomupdatess",
+                chat_id,
+                message_id
+            )
+            bot.answer_callback_query(call.id, "🎉 عضویت شما تأیید شد!")
+        else:
+            bot.answer_callback_query(
+                call.id,
+                "❌ هنوز عضو کانال نشدی!\n"
+                "لطفاً اول عضو شو بعد دکمه رو بزن.",
+                show_alert=True
+            )
+    except Exception as e:
+        print(f"❌ خطا: {e}")
+        bot.answer_callback_query(
+            call.id,
+            "⚠️ خطا در بررسی عضویت. دوباره تلاش کن.",
+            show_alert=True
+        )
 
-# مرحله 3: بررسی اینکه ربات ادمین است
-try:
-    bot_member = bot.get_chat_member(CHANNEL_ID, me.id)
-    print(f"✅ وضعیت ربات در کانال: {bot_member.status}")
-    if bot_member.status in ['administrator', 'creator']:
-        print("   ✅ ربات ادمین است ✓")
-    else:
-        print("   ⚠️ ربات ادمین نیست! لطفاً ربات را ادمین کنید.")
-except Exception as e:
-    print(f"❌ خطا در بررسی وضعیت ربات: {e}")
+# دستور کمک
+@bot.message_handler(commands=['help'])
+def help_command(message):
+    help_text = (
+        "🤖 **راهنمای ربات فانتوم**\n\n"
+        "📌 **دستورات:**\n"
+        "/start - شروع مجدد ربات\n"
+        "/help - نمایش این پیام\n"
+        "/channel - اطلاعات کانال\n\n"
+        "🔗 **کانال ما:**\n"
+        "@Phantomupdatess"
+    )
+    bot.reply_to(message, help_text, parse_mode='Markdown')
 
-# مرحله 4: بررسی عضویت کاربر شما
-try:
-    member = bot.get_chat_member(CHANNEL_ID, USER_ID)
-    print(f"✅ وضعیت کاربر {USER_ID}: {member.status}")
-    if member.status in ['member', 'administrator', 'creator']:
-        print("   ✅ کاربر عضو کانال است ✓")
-    else:
-        print("   ⚠️ کاربر عضو کانال نیست!")
-except Exception as e:
-    print(f"❌ خطا در بررسی کاربر: {e}")
-    if "user not found" in str(e):
-        print("   ⚠️ کاربر در کانال نیست یا ربات دسترسی ندارد!")
+# اطلاعات کانال
+@bot.message_handler(commands=['channel'])
+def channel_command(message):
+    channel_text = (
+        "📢 **کانال رسمی فانتوم**\n\n"
+        "🔗 لینک: https://t.me/Phantomupdatess\n"
+        "📌 یوزرنیم: @Phantomupdatess\n\n"
+        "❗️ برای استفاده از ربات، حتماً عضو کانال شوید."
+    )
+    bot.reply_to(message, channel_text, parse_mode='Markdown')
 
-print("=" * 50)
-print("🏁 عیب‌یابی به پایان رسید.")
+if __name__ == "__main__":
+    print("=" * 50)
+    print("🤖 ربات فانتوم فعال شد...")
+    print(f"📌 کانال: {CHANNEL_ID}")
+    print(f"🔗 لینک: https://t.me/Phantomupdatess")
+    print("=" * 50)
+    bot.infinity_polling(skip_pending=True)
