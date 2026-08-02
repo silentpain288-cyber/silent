@@ -1,29 +1,49 @@
 import telebot
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-# توکن ربات خود را وارد کنید
+# توکن ربات
 TOKEN = '8883032492:AAGUNmCljCd2AMf8n6hxlo9pUgSaQRpW0MU'
-CHANNEL_USERNAME = '@Phantomupdatess'  # نام کاربری کانال (با @)
-CHANNEL_ID = '@Phantomupdatess'  # یا آی‌دی عددی کانال (مثلاً -100123456)
+CHANNEL_ID = '@Phantomupdatess'
 
 bot = telebot.TeleBot(TOKEN)
 
-# تابع برای بررسی عضویت در کانال
+# ==================== توابع کمکی ====================
+
 def is_user_member(user_id):
     try:
         member_status = bot.get_chat_member(CHANNEL_ID, user_id).status
         return member_status in ['member', 'administrator', 'creator']
-    except Exception as e:
-        print(f"خطا در بررسی عضویت: {e}")
+    except:
         return False
 
-# دستور /start
+# ==================== منوی اصلی ====================
+
+def main_menu():
+    """ساخت منوی اصلی با دکمه‌های شیشه‌ای"""
+    markup = InlineKeyboardMarkup(row_width=2)  # 2 ستونه
+    
+    btn1 = InlineKeyboardButton("👤 حساب کاربری", callback_data="account")
+    btn2 = InlineKeyboardButton("💎 الماس", callback_data="diamond")
+    btn3 = InlineKeyboardButton("💳 کیف پول", callback_data="wallet")
+    btn4 = InlineKeyboardButton("⭐ اشتراک", callback_data="subscription")
+    btn5 = InlineKeyboardButton("🤖 امکانات", callback_data="features")
+    btn6 = InlineKeyboardButton("📢 تبلیغات", callback_data="ads")
+    btn7 = InlineKeyboardButton("⚙️ تنظیمات", callback_data="settings")
+    btn8 = InlineKeyboardButton("📞 پشتیبانی", callback_data="support")
+    
+    # چینش دکمه‌ها (ردیف 2 تایی)
+    markup.add(btn1, btn2, btn3, btn4, btn5, btn6, btn7, btn8)
+    
+    return markup
+
+# ==================== دستور /start ====================
+
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
     user_id = message.from_user.id
     first_name = message.from_user.first_name or "کاربر گرامی"
-
-    # طراحی زیبا و منحصربه‌فرد با استفاده از نشانه‌های درخواستی
+    
+    # پیام خوش‌آمدگویی با طراحی خاص
     welcome_text = f"""
 ⫸◄◂ 𝕊𝕖𝕝𝕗 ℙ𝕙𝕒𝕟𝕥𝕠𝕞 ◂◄⫷
 
@@ -40,52 +60,116 @@ def send_welcome(message):
 👇 لطفاً پس از عضویت، دکمه «عضو شدم» را بزنید تا وارد ربات شوید.
 ⫸◄◂
     """
-
-    # ساخت کیبورد با دو دکمه (دورن خطی)
-    markup = InlineKeyboardMarkup(row_width=1)  # هر دکمه در یک خط جداگانه
-
-    # دکمه اول: لینک کانال (با آیکون و فونت خاص)
-    channel_btn = InlineKeyboardButton(
-        text="❈ 𝙎𝙚𝙡𝙛 𝙋𝙝𝙖𝙣𝙩𝙤𝙢『𖣘』", 
-        url="https://t.me/Phantomupdatess"
-    )
     
-    # دکمه دوم: بررسی عضویت (عضو شدم)
-    check_btn = InlineKeyboardButton(
-        text="✅ عضو شدم ( ✓ )", 
-        callback_data="check_membership"
-    )
-
+    markup = InlineKeyboardMarkup(row_width=1)
+    channel_btn = InlineKeyboardButton("❈ 𝙎𝙚𝙡𝙛 𝙋𝙝𝙖𝙣𝙩𝙤𝙢『𖣘』", url="https://t.me/Phantomupdatess")
+    check_btn = InlineKeyboardButton("✅ عضو شدم ( ✓ )", callback_data="check_membership")
     markup.add(channel_btn, check_btn)
-
-    # ارسال پیام خوش‌آمدگویی
+    
     bot.send_message(message.chat.id, welcome_text, reply_markup=markup, parse_mode='Markdown')
 
-# پردازش کلیک روی دکمه "عضو شدم"
+# ==================== بررسی عضویت ====================
+
 @bot.callback_query_handler(func=lambda call: call.data == "check_membership")
 def handle_check_membership(call):
     user_id = call.from_user.id
     chat_id = call.message.chat.id
-
+    
     if is_user_member(user_id):
-        # اگر کاربر عضو است، دسترسی داده می‌شود
+        # عضویت تأیید شد - نمایش منوی اصلی
         bot.edit_message_text(
-            chat_id=chat_id, 
+            chat_id=chat_id,
             message_id=call.message.message_id,
-            text="✅ *تبریک!* عضویت شما تأیید شد.\n\nاکنون می‌توانید از تمامی خدمات ربات استفاده کنید.\n⫸◄◂ 𝕊𝕖𝕝𝕗 ℙ𝕙𝕒𝕟𝕥𝕠𝕞 ◂◄⫷",
+            text="✅ *تبریک!* عضویت شما تأیید شد.\n\n" + show_main_menu_text(),
+            reply_markup=main_menu(),
             parse_mode='Markdown'
         )
-        # در اینجا می‌توانید منوی اصلی ربات را نمایش دهید
-        # مثلاً: show_main_menu(chat_id)
     else:
-        # اگر عضو نیست، خطا نشان داده می‌شود
         bot.answer_callback_query(
-            call.id, 
-            "⛔ شما هنوز عضو کانال نشده‌اید!\nلطفاً ابتدا روی دکمه کانال کلیک کرده و عضو شوید.", 
+            call.id,
+            "⛔ شما هنوز عضو کانال نشده‌اید!\nلطفاً ابتدا روی دکمه کانال کلیک کرده و عضو شوید.",
             show_alert=True
         )
 
-# اجرای ربات
+def show_main_menu_text():
+    """متن منوی اصلی"""
+    return """
+⫸◄◂ 𝕄𝕖𝕟𝕦 𝕊𝕖𝕝𝕗 ℙ𝕙𝕒𝕟𝕥𝕠𝕞 ◂◄⫷
+
+📌 لطفاً یکی از گزینه‌های زیر را انتخاب کنید:
+
+👤 حساب کاربری
+💎 الماس  
+💳 کیف پول
+⭐ اشتراک
+🤖 امکانات
+📢 تبلیغات
+⚙️ تنظیمات
+📞 پشتیبانی
+
+⫸◄◂
+"""
+
+# ==================== مدیریت دکمه‌های منو ====================
+
+@bot.callback_query_handler(func=lambda call: True)
+def handle_menu_buttons(call):
+    user_id = call.from_user.id
+    chat_id = call.message.chat.id
+    
+    # بررسی مجدد عضویت (امنیتی)
+    if not is_user_member(user_id):
+        bot.answer_callback_query(
+            call.id,
+            "⛔ شما از کانال خارج شده‌اید!\nلطفاً دوباره عضو شوید.",
+            show_alert=True
+        )
+        return
+    
+    # پاسخ به دکمه‌های مختلف
+    responses = {
+        "account": "👤 *حساب کاربری*\n\nنام: {}\nآیدی: `{}`\nوضعیت: فعال ✅".format(
+            call.from_user.first_name, call.from_user.id
+        ),
+        "diamond": "💎 *الماس*\n\nتعداد الماس شما: ۰\nبرای دریافت الماس، از بخش اشتراک استفاده کنید.",
+        "wallet": "💳 *کیف پول*\n\nموجودی: ۰ تومان\nتراکنش‌های اخیر: ندارد",
+        "subscription": "⭐ *اشتراک*\n\nاشتراک فعلی: رایگان\nبرای تهیه اشتراک ویژه کلیک کنید.",
+        "features": "🤖 *امکانات*\n\n🔹 ابزارهای امنیتی\n🔹 اسکنر فایل\n🔹 گزارش‌گیری خودکار",
+        "ads": "📢 *تبلیغات*\n\nبرای تبلیغات در کانال ما، با پشتیبانی تماس بگیرید.",
+        "settings": "⚙️ *تنظیمات*\n\n🔹 تغییر زبان\n🔹 اعلان‌ها\n🔹 حریم خصوصی",
+        "support": "📞 *پشتیبانی*\n\nبرای ارتباط با پشتیبانی:\n📧 @PhantomSupport\n🕘 پاسخگویی ۲۴/۷"
+    }
+    
+    if call.data in responses:
+        # دکمه بازگشت به منوی اصلی
+        markup = InlineKeyboardMarkup(row_width=1)
+        back_btn = InlineKeyboardButton("🔙 بازگشت به منوی اصلی", callback_data="back_to_menu")
+        markup.add(back_btn)
+        
+        bot.edit_message_text(
+            chat_id=chat_id,
+            message_id=call.message.message_id,
+            text=responses[call.data],
+            reply_markup=markup,
+            parse_mode='Markdown'
+        )
+        
+        bot.answer_callback_query(call.id)
+    
+    elif call.data == "back_to_menu":
+        # بازگشت به منوی اصلی
+        bot.edit_message_text(
+            chat_id=chat_id,
+            message_id=call.message.message_id,
+            text="⫸◄◂ 𝕄𝕖𝕟𝕦 𝕊𝕖𝕝𝕗 ℙ𝕙𝕒𝕟𝕥𝕠𝕞 ◂◄⫷\n\n📌 لطفاً یکی از گزینه‌های زیر را انتخاب کنید:\n\n👤 حساب کاربری\n💎 الماس\n💳 کیف پول\n⭐ اشتراک\n🤖 امکانات\n📢 تبلیغات\n⚙️ تنظیمات\n📞 پشتیبانی\n\n⫸◄◂",
+            reply_markup=main_menu(),
+            parse_mode='Markdown'
+        )
+        bot.answer_callback_query(call.id)
+
+# ==================== اجرا ====================
+
 if __name__ == "__main__":
-    print("ربات با موفقیت اجرا شد...")
+    print("🤖 ربات با موفقیت اجرا شد...")
+    print("📌 @PhantomSecurityBot")
     bot.infinity_polling()
