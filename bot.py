@@ -6,6 +6,7 @@ from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 TOKEN = '8883032492:AAGUNmCljCd2AMf8n6hxlo9pUgSaQRpW0MU'
 CHANNEL_ID = '@Phantomupdatess'
+OWNER_ID = 8831703400  # آیدی شما برای پیوی تبلیغات
 
 bot = telebot.TeleBot(TOKEN)
 
@@ -50,6 +51,16 @@ def init_db():
             description TEXT,
             date TEXT,
             status TEXT
+        )
+    ''')
+    
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS support_messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            message TEXT,
+            date TEXT,
+            status TEXT DEFAULT 'pending'
         )
     ''')
     
@@ -197,6 +208,16 @@ def update_wallet(user_id, amount):
     conn.commit()
     conn.close()
 
+def save_support_message(user_id, message):
+    conn = sqlite3.connect('users.db')
+    c = conn.cursor()
+    c.execute('''
+        INSERT INTO support_messages (user_id, message, date)
+        VALUES (?, ?, ?)
+    ''', (user_id, message, datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+    conn.commit()
+    conn.close()
+
 # ==================== بررسی عضویت کانال ====================
 
 def is_user_member(user_id):
@@ -257,13 +278,11 @@ def send_welcome(message):
         update_user_info(user_id, first_name, username)
     
     if is_user_member(user_id):
-        # حذف پیام قبلی
         try:
             bot.delete_message(message.chat.id, message.message_id)
         except:
             pass
         
-        # خوش‌آمدگویی
         welcome_text = f"""
 ⫸◄◂ 𝕊𝕖𝕝𝕗 ℙ𝕙𝕒𝕟𝕥𝕠𝕞 ◂◄⫷
 
@@ -278,7 +297,6 @@ def send_welcome(message):
         bot.send_message(message.chat.id, welcome_text, parse_mode='Markdown')
         bot.send_message(message.chat.id, rules_text(), parse_mode='Markdown')
         
-        # منوی اصلی
         menu_text = """
 ⫸◄◂ 𝕄𝕖𝕟𝕦 𝕊𝕖𝕝𝕗 ℙ𝕙𝕒𝕟𝕥𝕠𝕞 ◂◄⫷
 
@@ -333,13 +351,11 @@ def handle_check_membership(call):
     chat_id = call.message.chat.id
     
     if is_user_member(user_id):
-        # حذف پیام عضویت
         try:
             bot.delete_message(chat_id, call.message.message_id)
         except:
             pass
         
-        # خوش‌آمدگویی
         welcome_text = f"""
 ⫸◄◂ 𝕊𝕖𝕝𝕗 ℙ𝕙𝕒𝕟𝕥𝕠𝕞 ◂◄⫷
 
@@ -467,7 +483,7 @@ def handle_diamond(call):
 
 📊 برای خرید الماس، یکی از گزینه‌های زیر را انتخاب کنید:
 
-💰 هر ۱ الماس = ۱,۰۰۰ تومان
+💰 هر ۱ الماس = ۵,۰۰۰ تومان
 حداکثر خرید: ۱۰۰ الماس
 
 ⫸◄◂
@@ -502,7 +518,7 @@ def handle_buy_diamond(call):
 📌 حداقل: ۱ الماس
 📌 حداکثر: ۱۰۰ الماس
 
-💰 قیمت: ۱,۰۰۰ تومان = ۱ الماس
+💰 قیمت: ۵,۰۰۰ تومان = ۱ الماس
 
 👇 عدد مورد نظر را به صورت عددی وارد کنید:
 """
@@ -529,7 +545,7 @@ def process_diamond_purchase(message):
     try:
         amount = int(message.text)
         if 1 <= amount <= 100:
-            total_cost = amount * 1000
+            total_cost = amount * 5000  # 5000 تومان هر الماس
             wallet = get_user_wallet(user_id)
             
             if wallet >= total_cost:
@@ -553,7 +569,7 @@ def process_diamond_purchase(message):
 
 📊 برای خرید الماس، یکی از گزینه‌های زیر را انتخاب کنید:
 
-💰 هر ۱ الماس = ۱,۰۰۰ تومان
+💰 هر ۱ الماس = ۵,۰۰۰ تومان
 حداکثر خرید: ۱۰۰ الماس
 
 ⫸◄◂
@@ -675,7 +691,7 @@ def handle_deposit_wallet(call):
 🏦 شماره کارت: `6037-9918-1234-5678`
 👤 صاحب حساب: *Self Phantom*
 
-📌 مبلغ مورد نظر را به تومان وارد کنید:
+📌 حداقل شارژ: ۱,۰۰۰,۰۰۰ تومان
 
 🆔 شماره کاربر: `{user_number}`
 
@@ -705,7 +721,7 @@ def process_deposit(message):
     
     try:
         amount = int(message.text)
-        if amount > 0:
+        if amount >= 1000000:
             bot.send_message(
                 chat_id,
                 f"✅ درخواست شارژ {amount:,} تومان ثبت شد!\n\n📋 لطفاً مبلغ را به شماره کارت زیر واریز کنید:\n🏦 `6037-9918-1234-5678`\n\n🆔 شماره کاربر: `{get_user_number(user_id)}`\n\n⚠️ پس از واریز، رسید را به پشتیبانی ارسال کنید تا کیف پول شما شارژ شود.",
@@ -714,7 +730,7 @@ def process_deposit(message):
         else:
             bot.send_message(
                 chat_id,
-                "⛔ لطفاً یک عدد مثبت وارد کنید!",
+                "⛔ حداقل مبلغ شارژ ۱,۰۰۰,۰۰۰ تومان است!",
                 parse_mode='Markdown'
             )
     except ValueError:
@@ -959,15 +975,15 @@ def handle_ads(call):
 │ ✅ بهترین ارزش
 └─────────────────────────
 
-📌 برای سفارش، با پشتیبانی تماس بگیرید.
+📌 برای سفارش تبلیغات، روی دکمه زیر کلیک کنید:
 
 ⫸◄◂
 """
     
     markup = InlineKeyboardMarkup(row_width=1)
-    btn_contact = InlineKeyboardButton("📞 تماس با پشتیبانی", callback_data="support")
+    btn_order = InlineKeyboardButton("🛒 سفارش تبلیغات", callback_data="order_ads")
     btn_back = InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_menu")
-    markup.add(btn_contact, btn_back)
+    markup.add(btn_order, btn_back)
     
     bot.edit_message_text(
         chat_id=chat_id,
@@ -977,6 +993,144 @@ def handle_ads(call):
         parse_mode='Markdown'
     )
     bot.answer_callback_query(call.id)
+
+@bot.callback_query_handler(func=lambda call: call.data == "order_ads")
+def handle_order_ads(call):
+    user_id = call.from_user.id
+    chat_id = call.message.chat.id
+    user_number = get_user_number(user_id)
+    
+    order_text = f"""
+🛒 *سفارش تبلیغات*
+
+📋 برای سفارش تبلیغات، لطفاً اطلاعات زیر رو به ادمین ارسال کنید:
+
+🆔 شماره کاربر: `{user_number}`
+👤 نام: {call.from_user.first_name}
+
+📌 پکیج مورد نظر رو انتخاب کنید و پیام بدید.
+
+🔹 پکیج ۱ ماهه - ۴ تبلیغ - ۱۵۰,۰۰۰ تومان
+🔹 پکیج ۲ ماهه - ۶ تبلیغ - ۳۷۰,۰۰۰ تومان
+🔹 پکیج ۴ ماهه - ۹ تبلیغ - ۷۰۰,۰۰۰ تومان
+
+👇 روی دکمه زیر کلیک کنید تا به ادمین پیام بدید:
+"""
+    
+    markup = InlineKeyboardMarkup(row_width=1)
+    btn_contact = InlineKeyboardButton("📩 ارسال به ادمین", url="https://t.me/PhantomAdmin")  # یوزرنیم ادمین رو بزار
+    btn_back = InlineKeyboardButton("🔙 بازگشت", callback_data="ads")
+    markup.add(btn_contact, btn_back)
+    
+    bot.edit_message_text(
+        chat_id=chat_id,
+        message_id=call.message.message_id,
+        text=order_text,
+        reply_markup=markup,
+        parse_mode='Markdown'
+    )
+    bot.answer_callback_query(call.id)
+
+# ==================== پشتیبانی (داخل ربات) ====================
+
+@bot.callback_query_handler(func=lambda call: call.data == "support")
+def handle_support(call):
+    user_id = call.from_user.id
+    chat_id = call.message.chat.id
+    
+    if not is_user_member(user_id):
+        bot.answer_callback_query(call.id, "⛔ شما از کانال خارج شده‌اید!", show_alert=True)
+        return
+    
+    support_text = """
+⫸◄◂ 𝕊𝕖𝕝𝕗 ℙ𝕙𝕒𝕟𝕥𝕠𝕞 ◂◄⫷
+
+📞 *پشتیبانی*
+
+📌 برای ارتباط با پشتیبانی، پیام خود را به صورت متن وارد کنید.
+
+⚠️ پیام شما به ادمین ارسال می‌شود.
+
+👇 پیام خود را وارد کنید:
+"""
+    
+    markup = InlineKeyboardMarkup(row_width=1)
+    back_btn = InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_menu")
+    markup.add(back_btn)
+    
+    bot.edit_message_text(
+        chat_id=chat_id,
+        message_id=call.message.message_id,
+        text=support_text,
+        reply_markup=markup,
+        parse_mode='Markdown'
+    )
+    bot.answer_callback_query(call.id)
+    
+    bot.register_next_step_handler(call.message, process_support_message)
+
+def process_support_message(message):
+    user_id = message.from_user.id
+    chat_id = message.chat.id
+    
+    if message.text and message.text != "/start":
+        save_support_message(user_id, message.text)
+        
+        # ارسال به ادمین
+        admin_text = f"""
+📩 *پیام پشتیبانی جدید*
+
+👤 کاربر: {message.from_user.first_name}
+🆔 آیدی: `{user_id}`
+🆔 شماره کاربر: `{get_user_number(user_id)}`
+
+📝 پیام:
+{message.text}
+
+📅 تاریخ: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+"""
+        try:
+            bot.send_message(OWNER_ID, admin_text, parse_mode='Markdown')
+        except:
+            pass
+        
+        bot.send_message(
+            chat_id,
+            "✅ پیام شما با موفقیت به پشتیبانی ارسال شد!\n\n🕘 در اسرع وقت پاسخ داده می‌شود.",
+            parse_mode='Markdown'
+        )
+        
+        # برگشت به منو
+        menu_text = """
+⫸◄◂ 𝕄𝕖𝕟𝕦 𝕊𝕖𝕝𝕗 ℙ𝕙𝕒𝕟𝕥𝕠𝕞 ◂◄⫷
+
+📌 لطفاً یکی از گزینه‌های زیر را انتخاب کنید:
+
+👤 حساب کاربری
+💎 الماس  
+💳 کیف پول
+⭐ اشتراک
+🤖 امکانات
+📢 تبلیغات
+🧠 AI
+⚙️ تنظیمات
+📞 پشتیبانی
+📋 تعریف سلف
+
+⫸◄◂
+"""
+        bot.send_message(
+            chat_id,
+            menu_text,
+            reply_markup=main_menu(),
+            parse_mode='Markdown'
+        )
+    else:
+        bot.send_message(
+            chat_id,
+            "⛔ لطفاً پیام خود را به صورت متن وارد کنید!",
+            parse_mode='Markdown'
+        )
 
 # ==================== امکانات (خالی) ====================
 
@@ -1077,43 +1231,6 @@ def handle_settings(call):
         chat_id=chat_id,
         message_id=call.message.message_id,
         text=settings_text,
-        reply_markup=markup,
-        parse_mode='Markdown'
-    )
-    bot.answer_callback_query(call.id)
-
-# ==================== پشتیبانی ====================
-
-@bot.callback_query_handler(func=lambda call: call.data == "support")
-def handle_support(call):
-    user_id = call.from_user.id
-    chat_id = call.message.chat.id
-    
-    support_text = """
-⫸◄◂ 𝕊𝕖𝕝𝕗 ℙ𝕙𝕒𝕟𝕥𝕠𝕞 ◂◄⫷
-
-📞 *پشتیبانی*
-
-برای ارتباط با پشتیبانی:
-
-📧 @PhantomSupport
-🕘 پاسخگویی ۲۴/۷
-
-📌 سوالات متداول:
-🔹 سوال ۱: ...
-🔹 سوال ۲: ...
-
-⫸◄◂
-"""
-    
-    markup = InlineKeyboardMarkup(row_width=1)
-    back_btn = InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_menu")
-    markup.add(back_btn)
-    
-    bot.edit_message_text(
-        chat_id=chat_id,
-        message_id=call.message.message_id,
-        text=support_text,
         reply_markup=markup,
         parse_mode='Markdown'
     )
