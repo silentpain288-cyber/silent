@@ -1,13 +1,10 @@
 import telebot
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-# توکن ربات
 TOKEN = '8883032492:AAGUNmCljCd2AMf8n6hxlo9pUgSaQRpW0MU'
 CHANNEL_ID = '@Phantomupdatess'
 
 bot = telebot.TeleBot(TOKEN)
-
-# ==================== توابع کمکی ====================
 
 def is_user_member(user_id):
     try:
@@ -16,12 +13,8 @@ def is_user_member(user_id):
     except:
         return False
 
-# ==================== منوی اصلی ====================
-
 def main_menu():
-    """ساخت منوی اصلی با دکمه‌های شیشه‌ای"""
-    markup = InlineKeyboardMarkup(row_width=2)  # 2 ستونه
-    
+    markup = InlineKeyboardMarkup(row_width=2)
     btn1 = InlineKeyboardButton("👤 حساب کاربری", callback_data="account")
     btn2 = InlineKeyboardButton("💎 الماس", callback_data="diamond")
     btn3 = InlineKeyboardButton("💳 کیف پول", callback_data="wallet")
@@ -30,20 +23,14 @@ def main_menu():
     btn6 = InlineKeyboardButton("📢 تبلیغات", callback_data="ads")
     btn7 = InlineKeyboardButton("⚙️ تنظیمات", callback_data="settings")
     btn8 = InlineKeyboardButton("📞 پشتیبانی", callback_data="support")
-    
-    # چینش دکمه‌ها (ردیف 2 تایی)
     markup.add(btn1, btn2, btn3, btn4, btn5, btn6, btn7, btn8)
-    
     return markup
-
-# ==================== دستور /start ====================
 
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
     user_id = message.from_user.id
     first_name = message.from_user.first_name or "کاربر گرامی"
     
-    # پیام خوش‌آمدگویی با طراحی خاص
     welcome_text = f"""
 ⫸◄◂ 𝕊𝕖𝕝𝕗 ℙ𝕙𝕒𝕟𝕥𝕠𝕞 ◂◄⫷
 
@@ -68,19 +55,34 @@ def send_welcome(message):
     
     bot.send_message(message.chat.id, welcome_text, reply_markup=markup, parse_mode='Markdown')
 
-# ==================== بررسی عضویت ====================
-
 @bot.callback_query_handler(func=lambda call: call.data == "check_membership")
 def handle_check_membership(call):
     user_id = call.from_user.id
     chat_id = call.message.chat.id
     
     if is_user_member(user_id):
-        # عضویت تأیید شد - نمایش منوی اصلی
+        menu_text = """
+⫸◄◂ 𝕄𝕖𝕟𝕦 𝕊𝕖𝕝𝕗 ℙ𝕙𝕒𝕟𝕥𝕠𝕞 ◂◄⫷
+
+✅ تبریک! عضویت شما تأیید شد.
+
+📌 لطفاً یکی از گزینه‌های زیر را انتخاب کنید:
+
+👤 حساب کاربری
+💎 الماس  
+💳 کیف پول
+⭐ اشتراک
+🤖 امکانات
+📢 تبلیغات
+⚙️ تنظیمات
+📞 پشتیبانی
+
+⫸◄◂
+"""
         bot.edit_message_text(
             chat_id=chat_id,
             message_id=call.message.message_id,
-            text="✅ *تبریک!* عضویت شما تأیید شد.\n\n" + show_main_menu_text(),
+            text=menu_text,
             reply_markup=main_menu(),
             parse_mode='Markdown'
         )
@@ -91,9 +93,48 @@ def handle_check_membership(call):
             show_alert=True
         )
 
-def show_main_menu_text():
-    """متن منوی اصلی"""
-    return """
+@bot.callback_query_handler(func=lambda call: True)
+def handle_menu_buttons(call):
+    user_id = call.from_user.id
+    chat_id = call.message.chat.id
+    
+    if not is_user_member(user_id):
+        bot.answer_callback_query(
+            call.id,
+            "⛔ شما از کانال خارج شده‌اید!\nلطفاً دوباره عضو شوید.",
+            show_alert=True
+        )
+        return
+    
+    responses = {
+        "account": "👤 *حساب کاربری*\n\nنام: {}\nآیدی: `{}`\nوضعیت: فعال ✅".format(
+            call.from_user.first_name, call.from_user.id
+        ),
+        "diamond": "💎 *الماس*\n\nتعداد الماس شما: ۰\nبرای دریافت الماس، از بخش اشتراک استفاده کنید.",
+        "wallet": "💳 *کیف پول*\n\nموجودی: ۰ تومان\nتراکنش‌های اخیر: ندارد",
+        "subscription": "⭐ *اشتراک*\n\nاشتراک فعلی: رایگان\nبرای تهیه اشتراک ویژه کلیک کنید.",
+        "features": "🤖 *امکانات*\n\n🔹 ابزارهای امنیتی\n🔹 اسکنر فایل\n🔹 گزارش‌گیری خودکار",
+        "ads": "📢 *تبلیغات*\n\nبرای تبلیغات در کانال ما، با پشتیبانی تماس بگیرید.",
+        "settings": "⚙️ *تنظیمات*\n\n🔹 تغییر زبان\n🔹 اعلان‌ها\n🔹 حریم خصوصی",
+        "support": "📞 *پشتیبانی*\n\nبرای ارتباط با پشتیبانی:\n📧 @PhantomSupport\n🕘 پاسخگویی ۲۴/۷"
+    }
+    
+    if call.data in responses:
+        markup = InlineKeyboardMarkup(row_width=1)
+        back_btn = InlineKeyboardButton("🔙 بازگشت به منوی اصلی", callback_data="back_to_menu")
+        markup.add(back_btn)
+        
+        bot.edit_message_text(
+            chat_id=chat_id,
+            message_id=call.message.message_id,
+            text=responses[call.data],
+            reply_markup=markup,
+            parse_mode='Markdown'
+        )
+        bot.answer_callback_query(call.id)
+    
+    elif call.data == "back_to_menu":
+        menu_text = """
 ⫸◄◂ 𝕄𝕖𝕟𝕦 𝕊𝕖𝕝𝕗 ℙ𝕙𝕒𝕟𝕥𝕠𝕞 ◂◄⫷
 
 📌 لطفاً یکی از گزینه‌های زیر را انتخاب کنید:
@@ -109,67 +150,15 @@ def show_main_menu_text():
 
 ⫸◄◂
 """
-
-# ==================== مدیریت دکمه‌های منو ====================
-
-@bot.callback_query_handler(func=lambda call: True)
-def handle_menu_buttons(call):
-    user_id = call.from_user.id
-    chat_id = call.message.chat.id
-    
-    # بررسی مجدد عضویت (امنیتی)
-    if not is_user_member(user_id):
-        bot.answer_callback_query(
-            call.id,
-            "⛔ شما از کانال خارج شده‌اید!\nلطفاً دوباره عضو شوید.",
-            show_alert=True
-        )
-        return
-    
-    # پاسخ به دکمه‌های مختلف
-    responses = {
-        "account": "👤 *حساب کاربری*\n\nنام: {}\nآیدی: `{}`\nوضعیت: فعال ✅".format(
-            call.from_user.first_name, call.from_user.id
-        ),
-        "diamond": "💎 *الماس*\n\nتعداد الماس شما: ۰\nبرای دریافت الماس، از بخش اشتراک استفاده کنید.",
-        "wallet": "💳 *کیف پول*\n\nموجودی: ۰ تومان\nتراکنش‌های اخیر: ندارد",
-        "subscription": "⭐ *اشتراک*\n\nاشتراک فعلی: رایگان\nبرای تهیه اشتراک ویژه کلیک کنید.",
-        "features": "🤖 *امکانات*\n\n🔹 ابزارهای امنیتی\n🔹 اسکنر فایل\n🔹 گزارش‌گیری خودکار",
-        "ads": "📢 *تبلیغات*\n\nبرای تبلیغات در کانال ما، با پشتیبانی تماس بگیرید.",
-        "settings": "⚙️ *تنظیمات*\n\n🔹 تغییر زبان\n🔹 اعلان‌ها\n🔹 حریم خصوصی",
-        "support": "📞 *پشتیبانی*\n\nبرای ارتباط با پشتیبانی:\n📧 @PhantomSupport\n🕘 پاسخگویی ۲۴/۷"
-    }
-    
-    if call.data in responses:
-        # دکمه بازگشت به منوی اصلی
-        markup = InlineKeyboardMarkup(row_width=1)
-        back_btn = InlineKeyboardButton("🔙 بازگشت به منوی اصلی", callback_data="back_to_menu")
-        markup.add(back_btn)
-        
         bot.edit_message_text(
             chat_id=chat_id,
             message_id=call.message.message_id,
-            text=responses[call.data],
-            reply_markup=markup,
-            parse_mode='Markdown'
-        )
-        
-        bot.answer_callback_query(call.id)
-    
-    elif call.data == "back_to_menu":
-        # بازگشت به منوی اصلی
-        bot.edit_message_text(
-            chat_id=chat_id,
-            message_id=call.message.message_id,
-            text="⫸◄◂ 𝕄𝕖𝕟𝕦 𝕊𝕖𝕝𝕗 ℙ𝕙𝕒𝕟𝕥𝕠𝕞 ◂◄⫷\n\n📌 لطفاً یکی از گزینه‌های زیر را انتخاب کنید:\n\n👤 حساب کاربری\n💎 الماس\n💳 کیف پول\n⭐ اشتراک\n🤖 امکانات\n📢 تبلیغات\n⚙️ تنظیمات\n📞 پشتیبانی\n\n⫸◄◂",
+            text=menu_text,
             reply_markup=main_menu(),
             parse_mode='Markdown'
         )
         bot.answer_callback_query(call.id)
 
-# ==================== اجرا ====================
-
 if __name__ == "__main__":
     print("🤖 ربات با موفقیت اجرا شد...")
-    print("📌 @PhantomSecurityBot")
     bot.infinity_polling()
