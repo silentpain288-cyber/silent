@@ -72,7 +72,6 @@ def add_user(user_id, first_name, username):
     expiry = today + datetime.timedelta(days=30)
     expiry_str = expiry.strftime('%Y-%m-%d %H:%M:%S')
     
-    # شماره کاربری تصادفی 6 رقمی
     user_number = random.randint(100000, 999999)
     
     c.execute('''
@@ -258,7 +257,13 @@ def send_welcome(message):
         update_user_info(user_id, first_name, username)
     
     if is_user_member(user_id):
-        # نمایش خوش‌آمدگویی + قوانین
+        # حذف پیام قبلی
+        try:
+            bot.delete_message(message.chat.id, message.message_id)
+        except:
+            pass
+        
+        # خوش‌آمدگویی
         welcome_text = f"""
 ⫸◄◂ 𝕊𝕖𝕝𝕗 ℙ𝕙𝕒𝕟𝕥𝕠𝕞 ◂◄⫷
 
@@ -328,9 +333,13 @@ def handle_check_membership(call):
     chat_id = call.message.chat.id
     
     if is_user_member(user_id):
-        bot.delete_message(chat_id, call.message.message_id)
+        # حذف پیام عضویت
+        try:
+            bot.delete_message(chat_id, call.message.message_id)
+        except:
+            pass
         
-        # خوش‌آمدگویی + قوانین
+        # خوش‌آمدگویی
         welcome_text = f"""
 ⫸◄◂ 𝕊𝕖𝕝𝕗 ℙ𝕙𝕒𝕟𝕥𝕠𝕞 ◂◄⫷
 
@@ -511,7 +520,6 @@ def handle_buy_diamond(call):
     )
     bot.answer_callback_query(call.id)
     
-    # ثبت حالت خرید
     bot.register_next_step_handler(call.message, process_diamond_purchase)
 
 def process_diamond_purchase(message):
@@ -525,7 +533,6 @@ def process_diamond_purchase(message):
             wallet = get_user_wallet(user_id)
             
             if wallet >= total_cost:
-                # خرید انجام میشه
                 update_wallet(user_id, -total_cost)
                 update_diamonds(user_id, amount)
                 add_diamond_transaction(user_id, amount, "buy")
@@ -536,7 +543,6 @@ def process_diamond_purchase(message):
                     parse_mode='Markdown'
                 )
                 
-                # برگشت به منوی الماس
                 diamonds = get_user_diamonds(user_id)
                 diamond_text = f"""
 ⫸◄◂ 𝕊𝕖𝕝𝕗 ℙ𝕙𝕒𝕟𝕥𝕠𝕞 ◂◄⫷
@@ -690,6 +696,33 @@ def handle_deposit_wallet(call):
         parse_mode='Markdown'
     )
     bot.answer_callback_query(call.id)
+    
+    bot.register_next_step_handler(call.message, process_deposit)
+
+def process_deposit(message):
+    user_id = message.from_user.id
+    chat_id = message.chat.id
+    
+    try:
+        amount = int(message.text)
+        if amount > 0:
+            bot.send_message(
+                chat_id,
+                f"✅ درخواست شارژ {amount:,} تومان ثبت شد!\n\n📋 لطفاً مبلغ را به شماره کارت زیر واریز کنید:\n🏦 `6037-9918-1234-5678`\n\n🆔 شماره کاربر: `{get_user_number(user_id)}`\n\n⚠️ پس از واریز، رسید را به پشتیبانی ارسال کنید تا کیف پول شما شارژ شود.",
+                parse_mode='Markdown'
+            )
+        else:
+            bot.send_message(
+                chat_id,
+                "⛔ لطفاً یک عدد مثبت وارد کنید!",
+                parse_mode='Markdown'
+            )
+    except ValueError:
+        bot.send_message(
+            chat_id,
+            "⛔ لطفاً یک عدد معتبر وارد کنید!",
+            parse_mode='Markdown'
+        )
 
 @bot.callback_query_handler(func=lambda call: call.data == "withdraw_wallet")
 def handle_withdraw_wallet(call):
@@ -791,65 +824,40 @@ def handle_subscription(call):
 
 📌 پلن‌های اشتراک:
 
-1️⃣ *پلن ماهانه* 🌙
-💰 ۵۰,۰۰۰ تومان
-🎁 ۳۰ الماس هدیه
-✅ دسترسی کامل به امکانات
+┌─────────────────────────
+│ 📦 *پلن ۱ ماهه* 🌙
+│ 💰 ۵۰,۰۰۰ تومان
+│ 🎁 ۳۰ الماس هدیه
+└─────────────────────────
 
-2️⃣ *پلن ۳ ماهه* 📅
-💰 ۱۲۰,۰۰۰ تومان
-🎁 ۱۰۰ الماس هدیه
-✅ دسترسی کامل + پشتیبانی ویژه
+┌─────────────────────────
+│ 📦 *پلن ۳ ماهه* 📅
+│ 💰 ۱۲۰,۰۰۰ تومان
+│ 🎁 ۱۰۰ الماس هدیه
+└─────────────────────────
 
-3️⃣ *پلن ۶ ماهه* 📆
-💰 ۲۰۰,۰۰۰ تومان
-🎁 ۲۵۰ الماس هدیه
-✅ دسترسی کامل + پشتیبانی VIP
+┌─────────────────────────
+│ 📦 *پلن ۶ ماهه* 📆
+│ 💰 ۲۰۰,۰۰۰ تومان
+│ 🎁 ۲۵۰ الماس هدیه
+└─────────────────────────
 
-👇 برای خرید اشتراک، روی دکمه زیر کلیک کنید:
+👇 برای خرید، عدد پلن مورد نظر را وارد کنید:
+۱ = ۱ ماهه
+۲ = ۳ ماهه
+۳ = ۶ ماهه
 
 ⫸◄◂
 """
     
     markup = InlineKeyboardMarkup(row_width=1)
-    btn_buy = InlineKeyboardButton("🛒 خرید اشتراک", callback_data="buy_subscription")
-    btn_back = InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_menu")
-    markup.add(btn_buy, btn_back)
-    
-    bot.edit_message_text(
-        chat_id=chat_id,
-        message_id=call.message.message_id,
-        text=sub_text,
-        reply_markup=markup,
-        parse_mode='Markdown'
-    )
-    bot.answer_callback_query(call.id)
-
-@bot.callback_query_handler(func=lambda call: call.data == "buy_subscription")
-def handle_buy_subscription(call):
-    user_id = call.from_user.id
-    chat_id = call.message.chat.id
-    
-    buy_text = """
-🛒 *خرید اشتراک*
-
-لطفاً پلن مورد نظر را انتخاب کنید:
-
-📌 ۱: پلن ماهانه - ۵۰,۰۰۰ تومان
-📌 ۲: پلن ۳ ماهه - ۱۲۰,۰۰۰ تومان
-📌 ۳: پلن ۶ ماهه - ۲۰۰,۰۰۰ تومان
-
-👇 عدد پلن مورد نظر را وارد کنید:
-"""
-    
-    markup = InlineKeyboardMarkup(row_width=1)
-    back_btn = InlineKeyboardButton("🔙 بازگشت", callback_data="subscription")
+    back_btn = InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_menu")
     markup.add(back_btn)
     
     bot.edit_message_text(
         chat_id=chat_id,
         message_id=call.message.message_id,
-        text=buy_text,
+        text=sub_text,
         reply_markup=markup,
         parse_mode='Markdown'
     )
@@ -862,9 +870,9 @@ def process_subscription_purchase(message):
     chat_id = message.chat.id
     
     plans = {
-        "1": {"month": 1, "price": 50000, "diamonds": 30},
-        "2": {"month": 3, "price": 120000, "diamonds": 100},
-        "3": {"month": 6, "price": 200000, "diamonds": 250}
+        "1": {"month": 1, "price": 50000, "diamonds": 30, "name": "۱ ماهه"},
+        "2": {"month": 3, "price": 120000, "diamonds": 100, "name": "۳ ماهه"},
+        "3": {"month": 6, "price": 200000, "diamonds": 250, "name": "۶ ماهه"}
     }
     
     choice = message.text.strip()
@@ -874,11 +882,9 @@ def process_subscription_purchase(message):
         wallet = get_user_wallet(user_id)
         
         if wallet >= plan["price"]:
-            # خرید اشتراک
             update_wallet(user_id, -plan["price"])
             update_diamonds(user_id, plan["diamonds"])
             
-            # تمدید اشتراک
             conn = sqlite3.connect('users.db')
             c = conn.cursor()
             
@@ -894,9 +900,11 @@ def process_subscription_purchase(message):
             conn.commit()
             conn.close()
             
+            add_wallet_transaction(user_id, plan["price"], "subscription", f"خرید اشتراک {plan['name']}")
+            
             bot.send_message(
                 chat_id,
-                f"✅ اشتراک با موفقیت خریداری شد!\n\n⭐ پلن: {plan['month']} ماهه\n💎 {plan['diamonds']} الماس هدیه\n📅 تاریخ انقضا: {new_expiry.strftime('%Y-%m-%d')}",
+                f"✅ اشتراک با موفقیت خریداری شد!\n\n⭐ پلن: {plan['name']}\n💎 {plan['diamonds']} الماس هدیه\n📅 تاریخ انقضا: {new_expiry.strftime('%Y-%m-%d')}\n💰 مبلغ: {plan['price']:,} تومان",
                 parse_mode='Markdown'
             )
         else:
